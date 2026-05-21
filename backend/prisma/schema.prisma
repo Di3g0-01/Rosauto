@@ -1,0 +1,162 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model calcomania {
+  id_calcomania       Int                 @id @default(autoincrement())
+  numero_tarjeta      String              @db.VarChar(20)
+  anio                Int                 @db.SmallInt
+  fecha_pago          DateTime?           @db.Date
+  estado              String              @db.VarChar(20)
+  monto_pagado        Decimal?            @db.Decimal(8, 2)
+  fecha_vencimiento   DateTime            @db.Date
+  tarjeta_circulacion tarjeta_circulacion @relation(fields: [numero_tarjeta], references: [numero_tarjeta], onDelete: NoAction, onUpdate: NoAction)
+}
+
+model certificado_propiedad {
+  id_certificado      Int                   @id @default(autoincrement())
+  id_vehiculo         Int
+  fecha_emision       DateTime              @db.Date
+  activo              Boolean               @default(true)
+  vehiculo            vehiculo              @relation(fields: [id_vehiculo], references: [id_vehiculo], onDelete: NoAction, onUpdate: NoAction)
+  tarjeta_circulacion tarjeta_circulacion[]
+}
+
+model color {
+  id_color            Int                   @id @default(autoincrement())
+  nombre              String                @unique @db.VarChar(50)
+  tarjeta_circulacion tarjeta_circulacion[]
+}
+
+model historial_motor {
+  id_historial   Int       @id @default(autoincrement())
+  id_vehiculo    Int
+  motor_anterior String    @db.VarChar(50)
+  motor_nuevo    String    @db.VarChar(50)
+  fecha_cambio   DateTime? @default(now()) @db.Timestamp(6)
+  vehiculo       vehiculo  @relation(fields: [id_vehiculo], references: [id_vehiculo], onDelete: NoAction, onUpdate: NoAction)
+}
+
+model linea_estilo {
+  id_linea Int        @id @default(autoincrement())
+  id_marca Int
+  nombre   String     @db.VarChar(50)
+  marca    marca      @relation(fields: [id_marca], references: [id_marca], onDelete: NoAction, onUpdate: NoAction)
+  vehiculo vehiculo[]
+  tarjeta_circulacion tarjeta_circulacion[]
+}
+
+model marca {
+  id_marca     Int            @id @default(autoincrement())
+  nombre       String         @unique @db.VarChar(50)
+  linea_estilo linea_estilo[]
+}
+
+model propietario {
+  nit_cui             String                @id @db.VarChar(13)
+  nombres             String                @db.VarChar(100)
+  apellidos           String                @db.VarChar(100)
+  direccion           String                @db.VarChar(200)
+  fecha_nacimiento    DateTime              @db.Date
+  id_usuario          Int
+  usuario             usuario               @relation(fields: [id_usuario], references: [id_usuario], onDelete: NoAction, onUpdate: NoAction)
+  tarjeta_circulacion tarjeta_circulacion[]
+  vehiculo            vehiculo[]
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model tarjeta_circulacion {
+  numero_tarjeta        String                @id @db.VarChar(20)
+  id_vehiculo           Int
+  id_certificado        Int
+  fecha_emision         DateTime              @db.Date
+  estado                String                @db.Char(1)
+  nit_cui               String?               @db.VarChar(13)
+  id_tipo_uso           Int?
+  id_color              Int?
+  calcomania_pagada     Boolean?              @default(false)
+  
+  // Snapshot fields
+  placa                 String?               @db.VarChar(7)
+  num_motor             String?               @db.VarChar(50)
+  vin                   String?               @db.VarChar(17)
+  chasis                String?               @db.VarChar(50)
+  asientos              Int?                  @db.SmallInt
+  ejes                  Int?                  @db.SmallInt
+  cilindros             Int?                  @db.SmallInt
+  cc                    Int?                  @db.SmallInt
+  tonelaje              Decimal?              @db.Decimal(5, 2)
+  a_o_modelo            Int?                  @map("año_modelo")
+  id_linea              Int?
+  linea_estilo          linea_estilo?         @relation(fields: [id_linea], references: [id_linea], onDelete: NoAction, onUpdate: NoAction)
+
+  calcomania            calcomania[]
+  certificado_propiedad certificado_propiedad @relation(fields: [id_certificado], references: [id_certificado], onDelete: NoAction, onUpdate: NoAction)
+  color                 color?                @relation(fields: [id_color], references: [id_color], onDelete: NoAction, onUpdate: NoAction)
+  tipo_uso              tipo_uso?             @relation(fields: [id_tipo_uso], references: [id_tipo_uso], onDelete: NoAction, onUpdate: NoAction)
+  vehiculo              vehiculo              @relation(fields: [id_vehiculo], references: [id_vehiculo], onDelete: NoAction, onUpdate: NoAction)
+  propietario           propietario?          @relation(fields: [nit_cui], references: [nit_cui], onDelete: NoAction, onUpdate: NoAction)
+  tramite               tramite[]
+}
+
+model tipo_uso {
+  id_tipo_uso         Int                   @id @default(autoincrement())
+  nombre              String                @unique @db.VarChar(30)
+  tarjeta_circulacion tarjeta_circulacion[]
+  vehiculo            vehiculo[]
+}
+
+model tramite {
+  id_tramite          Int                 @id @default(autoincrement())
+  numero_tarjeta      String              @db.VarChar(20)
+  tipo_tramite        String              @db.VarChar(50)
+  fecha_tramite       DateTime?           @default(now()) @db.Timestamp(6)
+  descripcion         String?
+  tarjeta_circulacion tarjeta_circulacion @relation(fields: [numero_tarjeta], references: [numero_tarjeta], onDelete: NoAction, onUpdate: NoAction)
+}
+
+model usuario {
+  id_usuario    Int           @id @default(autoincrement())
+  username      String        @unique @db.VarChar(50)
+  password_hash String        @db.VarChar(255)
+  rol           String        @db.VarChar(20)
+  propietario   propietario[]
+}
+
+model vehiculo {
+  id_vehiculo           Int                     @id @default(autoincrement())
+  vin                   String                  @unique @db.VarChar(17)
+  placa                 String                  @unique @db.VarChar(7)
+  num_motor             String                  @db.VarChar(50)
+  color                 String                  @db.VarChar(30)
+  cc                    Int                     @db.SmallInt
+  cilindros             Int                     @db.SmallInt
+  asientos              Int                     @db.SmallInt
+  ejes                  Int                     @db.SmallInt
+  tonelaje              Decimal                 @db.Decimal(5, 2)
+  id_linea              Int
+  id_tipo_uso           Int
+  nit_cui               String                  @db.VarChar(13)
+  chasis                String?                 @unique @db.VarChar(50)
+  a_o_modelo            Int?                    @map("año_modelo")
+  certificado_propiedad certificado_propiedad[]
+  historial_motor       historial_motor[]
+  tarjeta_circulacion   tarjeta_circulacion[]
+  historial_cambios     historial_cambios[]
+  linea_estilo          linea_estilo            @relation(fields: [id_linea], references: [id_linea], onDelete: NoAction, onUpdate: NoAction)
+  tipo_uso              tipo_uso                @relation(fields: [id_tipo_uso], references: [id_tipo_uso], onDelete: NoAction, onUpdate: NoAction)
+  propietario           propietario             @relation(fields: [nit_cui], references: [nit_cui], onDelete: NoAction, onUpdate: NoAction)
+}
+
+model historial_cambios {
+  id_historial     Int      @id @default(autoincrement())
+  id_vehiculo      Int
+  descripcion      String   @db.Text
+  fecha_cambio     DateTime @default(now()) @db.Timestamp(6)
+  vehiculo         vehiculo @relation(fields: [id_vehiculo], references: [id_vehiculo], onDelete: Cascade)
+}
